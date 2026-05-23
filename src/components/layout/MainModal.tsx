@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 
-import { Dashboard } from '@/components/Dashboard'
+import { Dashboard } from './Dashboard'
 
 import type { Variants } from 'framer-motion'
 

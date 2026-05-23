@@ -1,39 +1,4 @@
-import { differenceInHours, isPast } from 'date-fns'
-
-// --- Badge Utils ---
-/**
- * Safari 등 다양한 브라우저에서 날짜 문자열을 안전하게 파싱합니다.
- */
-const safeParseDate = (dateStr: string | null | undefined): Date | null => {
-  if (!dateStr) return null
-  try {
-    // "2024-05-01 23:59:59" -> "2024-05-01T23:59:59"
-    const isoStr = dateStr.trim().replace(' ', 'T')
-    const date = new Date(isoStr)
-    return isNaN(date.getTime()) ? null : date
-  } catch {
-    return null
-  }
-}
-
-/**
- * 과제의 상태를 계산하여 'imminent' (48시간 이내 마감) 여부를 반환합니다.
- */
-const isImminentTask = (task: any, manualOverrides: Record<string, boolean>, now: Date = new Date()): boolean => {
-  // 사용자가 수동으로 체크했거나 이미 제출한 경우 제외
-  const hasSubmitted = manualOverrides[task.id] !== undefined ? manualOverrides[task.id] : task.hasSubmitted
-  if (hasSubmitted) return false
-
-  const endAtDate = safeParseDate(task.endAt)
-  if (!endAtDate) return false
-
-  // 이미 마감된 경우 제외
-  if (isPast(endAtDate)) return false
-
-  // 마감까지 남은 시간 계산 (48시간 이내)
-  const hoursUntilDue = differenceInHours(endAtDate, now)
-  return hoursUntilDue >= 0 && hoursUntilDue <= 48
-}
+import { isImminentTask } from '@/utils'
 
 /**
  * 스토리지 데이터를 기반으로 배지 텍스트를 업데이트합니다.
@@ -44,7 +9,11 @@ const updateBadge = async () => {
     const activityList = data.contents?.activityList || []
     const manualOverrides = data.manualOverrides || {}
 
-    const imminentCount = activityList.filter((task: any) => isImminentTask(task, manualOverrides)).length
+    const imminentCount = activityList.filter((task: any) => {
+      // 사용자가 수동으로 체크했거나 실제 제출 상태를 반영하여 마감 임박 여부 계산
+      const hasSubmitted = manualOverrides[task.id] !== undefined ? manualOverrides[task.id] : task.hasSubmitted
+      return isImminentTask({ ...task, hasSubmitted })
+    }).length
 
     if (imminentCount > 0) {
       const badgeText = imminentCount > 99 ? '99+' : imminentCount.toString()

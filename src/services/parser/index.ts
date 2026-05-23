@@ -3,25 +3,10 @@ import { fetchAndParse } from './utils/dom'
 import { UNIVERSITY_NAME_MAP } from '@/constants'
 import type { University } from '@/constants'
 import type { Activity, Assignment, Course, Quiz, Video } from '@/types'
-import { getLinkId, mapElement, getAttr, getText, getDirectText, origin } from '@/utils'
+import { getLinkId, mapElement, getAttr, getText, getDirectText, origin, normalizeString, timeToSeconds } from '@/utils'
 
 import type * as cheerio from 'cheerio'
 import type { AnyNode } from 'domhandler'
-
-/**
- * 전역 유틸리티: 문자열 정규화 (공백/특수문자 제거 및 소문자화)
- */
-const normalizeString = (str: string) => str.replace(/[\s\W_]/g, '').toLowerCase()
-
-/**
- * 전역 유틸리티: 시간 문자열(HH:MM:SS)을 초 단위로 변환
- */
-const timeToSeconds = (time: string) => {
-  const parts = time.split(':').map(Number).filter(n => !isNaN(n))
-  if (parts.length === 2) return parts[0] * 60 + parts[1]
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
-  return 0
-}
 
 /**
  * 과목 목록을 가져옵니다.

@@ -1,6 +1,6 @@
 import { useState, type PropsWithChildren } from 'react'
 
-import { ThemeContext } from '../context'
+import { ThemeContext } from '@/context'
 
 import type { Theme } from 'daisyui'
 

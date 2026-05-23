@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 import { chromeStorageClient } from './chromeStorageClient'
 import packageJson from '../../package.json'
-import { filterActivities } from '@/content/components/task/filterActivities'
+import { filterActivities } from '@/components/task/filterActivities'
 import type { Activity, StorageData } from '@/types'
 import { isMac, safeParseDate } from '@/utils'
 

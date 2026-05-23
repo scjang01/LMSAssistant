@@ -1,4 +1,4 @@
-import { pxToRemMap } from './src/styles'
+import { pxToRemMap } from './src/styles/pxToRemMap'
 
 /** @type {import('tailwindcss').Config} */
 export default {

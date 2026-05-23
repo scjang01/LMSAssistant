@@ -1,6 +1,6 @@
 import { SettingItem } from './SettingItem'
 import { Shortcut } from './Shortcut'
-import packageJson from '../../../../package.json'
+import packageJson from '../../../package.json'
 import { useStorageStore } from '@/storage/useStorageStore'
 
 const { version } = packageJson

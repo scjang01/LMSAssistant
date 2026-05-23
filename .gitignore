@@ -44,3 +44,6 @@ coverage/
 .gemini/
 .gemini_security/
 conductor/
+.antigravitycli
+memory/
+tracker/
