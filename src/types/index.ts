@@ -34,7 +34,7 @@ export type Contents = {
   activityList: Activity[]
 }
 
-export type ActivityStatus = 'all' | 'ongoing' | 'imminent' | 'expired' | 'submitted'
+export type ActivityStatus = 'all' | 'ongoing' | 'imminent' | 'expired' | 'submitted' | 'upcoming'
 
 export type ActivityType = 'assignment' | 'video' | 'quiz'
 

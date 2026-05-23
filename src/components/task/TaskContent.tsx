@@ -13,7 +13,14 @@ import { useStorageStore } from '@/storage/useStorageStore'
 import type { ActivityStatus, ActivityType } from '@/types'
 import { cn } from '@/utils'
 
-const STATUS_STYLES: Record<Exclude<ActivityStatus, 'all'>, { active: string; inactive: string; label: string }> = {
+type StatusStyle = { active: string; inactive: string; label: string }
+
+const STATUS_STYLES: Record<string, StatusStyle> = {
+  upcoming: {
+    active: 'bg-slate-600 text-white shadow-md',
+    inactive: 'bg-slate-50 text-slate-700 hover:bg-slate-100',
+    label: '진행 전',
+  },
   ongoing: {
     active: 'bg-blue-600 text-white shadow-md',
     inactive: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
@@ -24,21 +31,21 @@ const STATUS_STYLES: Record<Exclude<ActivityStatus, 'all'>, { active: string; in
     inactive: 'bg-orange-50 text-orange-700 hover:bg-orange-100',
     label: '마감 임박',
   },
-  expired: {
-    active: 'bg-red-600 text-white shadow-md',
-    inactive: 'bg-red-50 text-red-700 hover:bg-red-100',
-    label: '마감 지남',
-  },
   submitted: {
     active: 'bg-emerald-600 text-white shadow-md',
     inactive: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
     label: '완료',
   },
+  expired: {
+    active: 'bg-red-600 text-white shadow-md',
+    inactive: 'bg-red-50 text-red-700 hover:bg-red-100',
+    label: '마감 지남',
+  },
 }
 
 const STATUS_MAP = Object.entries(STATUS_STYLES).reduce(
   (acc, [key, value]) => ({ ...acc, [key]: value.label }),
-  { all: '전체' } as Record<ActivityStatus, string>,
+  {} as Record<string, string>,
 )
 
 export function TaskContent() {
@@ -85,26 +92,28 @@ export function TaskContent() {
           <Search size={18} className="absolute left-12px top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
 
-        <div className="mb-12px flex gap-4px">
-          {Object.entries(STATUS_STYLES).map(([key, style]) => (
-            <button
-              key={key}
-              className={cn(
-                'flex flex-1 flex-col items-center justify-center rounded-lg py-8px transition-all duration-200 active:scale-95',
-                filterOptions.statuses.includes(key as ActivityStatus) ? style.active : style.inactive,
-              )}
-              onClick={() => toggleFilter('statuses', key as ActivityStatus)}
-            >
-              <span className="text-16px font-bold">{summary[key as keyof typeof summary]}</span>
-              <span className="text-9px font-medium opacity-80">{style.label}</span>
-            </button>
-          ))}
+        <div className="mb-12px flex gap-4px overflow-x-auto no-scrollbar pb-4px">
+          {Object.entries(STATUS_STYLES)
+            .filter(([key]) => key !== 'upcoming')
+            .map(([key, style]) => (
+              <button
+                key={key}
+                className={cn(
+                  'flex min-w-64px flex-1 flex-col items-center justify-center rounded-lg py-8px transition-all duration-200 active:scale-95',
+                  filterOptions.statuses.includes(key as ActivityStatus) ? style.active : style.inactive,
+                )}
+                onClick={() => toggleFilter('statuses', key as ActivityStatus)}
+              >
+                <span className="text-16px font-bold">{(summary as any)[key] || 0}</span>
+                <span className="text-9px font-medium opacity-80">{style.label}</span>
+              </button>
+            ))}
         </div>
 
         <div className="flex items-center justify-between text-12px text-gray-500">
-          <div className="flex min-h-24px flex-wrap items-center gap-4px">
+          <div className="flex min-h-24px flex-wrap items-center gap-4px text-11px">
             {filterOptions.statuses.map(s => (
-              <FilterBadge key={s} label={STATUS_MAP[s]} onRemove={() => removeFilter('statuses', s)} />
+              <FilterBadge key={s} label={STATUS_MAP[s] || s} onRemove={() => removeFilter('statuses', s)} />
             ))}
             {filterOptions.categories.map(c => (
               <FilterBadge

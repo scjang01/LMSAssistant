@@ -1,19 +1,18 @@
 <div align='center'>
-   <h1>Gachon Assistant</h1>
-   <p>가천대학교 사이버캠퍼스 과제, 퀴즈, 녹화강의 현황을 한 눈에 확인하세요</p>
-   <p><i>사이버캠퍼스의 변화된 환경에 맞춰 새롭게 태어난 가천 어시스턴트입니다.</i></p>
+   <h1>LMS Assistant</h1>
+   <p>대학교 LMS에 업로드 된 과제, 퀴즈, 녹화강의 현황을 한 눈에 확인하세요</p>
    <div>
       <img src="https://github.com/user-attachments/assets/7bc1d9dd-3c1e-41fb-aa12-48a663a8e836" alt="화면" />
    </div>
    <br />
-   <img src="https://img.shields.io/github/license/scjang01/GachonAssistant" alt="라이선스"/>
+   <img src="https://img.shields.io/github/license/scjang01/LMSAssistant" alt="라이선스"/>
 </div>
 
 <hr />
 
 ## 🚀 주요 기능
 
-가천대학교 학우들의 편리한 학습 관리를 위해 강력한 기능들을 제공합니다.
+가천대학교 및 인천대학교 학생들의 편리한 학습 관리를 위해 강력한 기능들을 제공합니다.
 
 1. **녹화강의 완벽 지원**
    - 녹화강의의 **마감 기한**과 **학습 진행도(%)**를 실시간으로 확인하고 바로 시청 페이지로 이동할 수 있어요.

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { SettingItem } from './SettingItem'
 import { SHORTCUTS, KOREAN_TO_ENGLISH } from '@/constants/shortcuts'
-import { useShortcutStore } from '@/storage/useShortcutStore'
 import { useStorageStore } from '@/storage/useStorageStore'
 import { cn, isMac } from '@/utils'
 
@@ -24,7 +23,7 @@ export function Shortcut() {
   const settings = useStorageStore(state => state.settings)
   const updateData = useStorageStore(state => state.updateData)
   
-  const { isEditing, setIsEditing } = useShortcutStore()
+  const { isEditing, setIsEditing } = useStorageStore()
   const [tempShortcut, setTempShortcut] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const shortcutInputRef = useRef<HTMLInputElement>(null)

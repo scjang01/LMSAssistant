@@ -101,7 +101,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 // 7. HTML Fetch 대행 (Open Proxy 방지)
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === 'fetch-html') {
-    const allowedOrigins = ['https://cyber.gachon.ac.kr', 'https://lib.gachon.ac.kr']
+    const allowedOrigins = [import.meta.env.VITE_UNIV_URL]
 
     try {
       const url = new URL(request.url)

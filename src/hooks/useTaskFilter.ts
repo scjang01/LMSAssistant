@@ -8,10 +8,10 @@ import { getTaskStatus } from '@/utils'
  */
 export const useTaskFilter = (searchQuery: string) => {
   const contents = useStorageStore(state => state.contents)
-  const filterOptions = useStorageStore(state => state.filterOptions)
   const manualOverrides = useStorageStore(state => state.manualOverrides)
   const getFilteredActivities = useStorageStore(state => state.getFilteredActivities)
   const updateData = useStorageStore(state => state.updateData)
+  const filterOptions = useStorageStore(state => state.filterOptions)
 
   const filteredTasks = useMemo(
     () => getFilteredActivities(searchQuery),
@@ -23,7 +23,8 @@ export const useTaskFilter = (searchQuery: string) => {
   const summary = useMemo(() => {
     return contents.activityList.reduce(
       (acc, task) => {
-        const hasSubmitted = manualOverrides[task.id] !== undefined ? manualOverrides[task.id] : task.hasSubmitted
+        // 실제 서버에서 제출되었거나(true), 사용자가 수동 완료 처리(true)한 경우 모두 제출로 판정합니다.
+        const hasSubmitted = task.hasSubmitted || manualOverrides[task.id] === true
         const taskWithOverride = { ...task, hasSubmitted }
 
         // 1. 과목 필터
@@ -49,9 +50,10 @@ export const useTaskFilter = (searchQuery: string) => {
         else if (status === 'ongoing' || status === 'no-deadline') acc.ongoing++
         else if (status === 'imminent') acc.imminent++
         else if (status === 'expired') acc.expired++
+        else if (status === 'upcoming') acc.upcoming++
         return acc
       },
-      { ongoing: 0, imminent: 0, expired: 0, submitted: 0 },
+      { ongoing: 0, imminent: 0, expired: 0, submitted: 0, upcoming: 0 },
     )
   }, [contents.activityList, filterOptions.courseIds, filterOptions.categories, searchQuery, now, manualOverrides])
 

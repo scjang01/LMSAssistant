@@ -7,7 +7,7 @@ const isValidActivity = (activity: Activity): boolean =>
   activity.title !== '' && (!activity.endAt || activity.endAt === '' || isValid(new Date(activity.endAt)))
 
 const filterByStatus = (activity: Activity, statuses: ActivityStatus[]): boolean => {
-  if (statuses.length === 0 || statuses.includes('all')) return true
+  if (statuses.length === 0) return true
 
   const taskStatus = getTaskStatus(activity)
 
@@ -15,7 +15,7 @@ const filterByStatus = (activity: Activity, statuses: ActivityStatus[]): boolean
     if (status === 'ongoing') {
       return taskStatus === 'ongoing' || taskStatus === 'no-deadline'
     }
-    return taskStatus === status
+    return taskStatus === (status as any)
   })
 }
 
