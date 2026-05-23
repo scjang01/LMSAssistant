@@ -1,5 +1,9 @@
+export const UNIV_URL = import.meta.env.VITE_UNIV_URL
+export const UNIV_NAME = import.meta.env.VITE_UNIV_NAME
+export const UNIV_ID = import.meta.env.VITE_UNIV_ID
+
 export const UNIVERSITY_NAME_MAP = {
-  'https://cyber.gachon.ac.kr': '가천대학교',
+  [UNIV_URL]: UNIV_NAME,
 } as const
 
 export type UniversityLink = keyof typeof UNIVERSITY_NAME_MAP

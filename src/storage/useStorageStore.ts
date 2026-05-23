@@ -11,6 +11,8 @@ import { isMac, safeParseDate } from '@/utils'
  */
 interface StorageStore extends StorageData {
   isInitialized: boolean
+  isEditing: boolean
+  setIsEditing: (isEditing: boolean) => void
   initialize: () => Promise<void>
   updateData: <K extends keyof StorageData>(key: K, updater: (prev: StorageData[K]) => StorageData[K]) => Promise<void>
   getFilteredActivities: (searchQuery: string) => Activity[]
@@ -46,6 +48,8 @@ const mergeData = (initial: StorageData, stored: Partial<StorageData>): StorageD
 export const useStorageStore = create<StorageStore>((set, get) => ({
   ...initialStorageData,
   isInitialized: false,
+  isEditing: false,
+  setIsEditing: isEditing => set({ isEditing }),
 
   /** 스토리지로부터 데이터를 불러와 초기화합니다. */
   initialize: async () => {
@@ -67,9 +71,12 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
       let hasChanged = false
 
       activityList.forEach(activity => {
-        if (currentOverrides[activity.id] !== undefined && currentOverrides[activity.id] === activity.hasSubmitted) {
-          delete currentOverrides[activity.id]
-          hasChanged = true
+        if (currentOverrides[activity.id] !== undefined) {
+          // 실제 서버 상태가 제출 완료(true)이거나, 수동 설정값이 서버 상태와 일치하면 정리합니다.
+          if (activity.hasSubmitted || currentOverrides[activity.id] === activity.hasSubmitted) {
+            delete currentOverrides[activity.id]
+            hasChanged = true
+          }
         }
       })
 
@@ -93,7 +100,8 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
 
     for (let i = 0; i < activityList.length; i++) {
       const activity = activityList[i]
-      const hasSubmitted = manualOverrides[activity.id] !== undefined ? manualOverrides[activity.id] : activity.hasSubmitted
+      // 실제 서버에서 제출되었거나(true), 사용자가 수동 완료 처리(true)한 경우 모두 제출로 판정합니다.
+      const hasSubmitted = activity.hasSubmitted || manualOverrides[activity.id] === true
       const updatedActivity: Activity = { ...activity, hasSubmitted }
 
       if (filterActivities(updatedActivity, combinedOptions)) {

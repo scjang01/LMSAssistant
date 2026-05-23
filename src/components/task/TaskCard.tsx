@@ -1,6 +1,6 @@
-import { format, differenceInMinutes } from 'date-fns'
+import { format, differenceInMinutes, differenceInDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Video, FileText, CheckCircle, AlertTriangle, Clock, XCircle, HelpCircle, Check } from 'lucide-react'
+import { Video, FileText, CheckCircle, AlertTriangle, Clock, XCircle, HelpCircle, Check, Lock } from 'lucide-react'
 import { useMemo, useState, useEffect } from 'react'
 
 import { ACTIVITY_TYPE_MAP } from '@/constants'
@@ -13,7 +13,7 @@ const StatusBadge = ({
   status,
 }: {
   task: Activity
-  status: 'submitted' | 'expired' | 'imminent' | 'ongoing' | 'no-deadline'
+  status: 'submitted' | 'expired' | 'imminent' | 'ongoing' | 'upcoming' | 'no-deadline'
 }) => {
   const isVideo = task.type === 'video' || (task.type as string) === 'mooc'
 
@@ -36,6 +36,12 @@ const StatusBadge = ({
           <AlertTriangle size={14} className="mr-1" /> 마감 임박
         </span>
       )
+    case 'upcoming':
+      return (
+        <span className="flex items-center text-12px font-medium text-gray-400">
+          <Lock size={14} className="mr-1" /> 진행 전
+        </span>
+      )
     case 'ongoing':
       return (
         <span className="flex items-center text-12px font-medium text-blue-600">
@@ -55,7 +61,9 @@ export function TaskCard({ task }: Props) {
   const updateData = useStorageStore(state => state.updateData)
   
   const endAtDate = useMemo(() => (task.endAt ? new Date(task.endAt) : new Date(NaN)), [task.endAt])
+  const startAtDate = useMemo(() => (task.startAt ? new Date(task.startAt) : new Date(NaN)), [task.startAt])
   const isValidDate = !isNaN(endAtDate.getTime())
+  const isValidStartDate = !isNaN(startAtDate.getTime())
 
   // 서버 갱신 없이 시간만 실시간으로 업데이트하기 위한 상태
   const [now, setNow] = useState(new Date())
@@ -65,7 +73,11 @@ export function TaskCard({ task }: Props) {
     return () => clearInterval(timer)
   }, [])
 
-  const status = useMemo(() => getTaskStatus(task, now), [task, now])
+  const status = useMemo(() => {
+    const currentStatus = getTaskStatus(task, now)
+    // 실제 제출 완료 상태면 'upcoming'이나 'expired'보다 'submitted'를 우선 표시
+    return task.hasSubmitted ? 'submitted' : currentStatus
+  }, [task, now])
 
   const handleManualToggle = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -77,8 +89,23 @@ export function TaskCard({ task }: Props) {
   }
 
   const deadlineText = useMemo(() => {
+    // 이미 완료된 과제는 기한 정보를 표준 형식으로 표시
+    if (status === 'submitted') {
+      return isValidDate ? <span>{format(endAtDate, 'MM/dd HH:mm')} 마감</span> : '기한 없음'
+    }
+
+    if (status === 'upcoming' && isValidStartDate) {
+      const daysUntil = differenceInDays(startAtDate, now)
+      const periodRange = `${format(startAtDate, 'MM.dd')}~${format(endAtDate, 'MM.dd')}`
+      return (
+        <div className="flex items-baseline gap-4px text-gray-400">
+          <span className="font-bold">{daysUntil > 0 ? `${daysUntil}일 뒤 열람 가능` : '곧 열람 가능'}</span>
+          <span className="text-10px font-normal opacity-80">({periodRange})</span>
+        </div>
+      )
+    }
+
     if (!isValidDate) return '기한 없음'
-    if (status === 'submitted') return <span>{format(endAtDate, 'MM/dd')}까지</span>
     if (status === 'expired') return <span>{format(endAtDate, 'MM/dd HH:mm')}까지</span>
 
     const totalMinutes = differenceInMinutes(endAtDate, now)
@@ -97,13 +124,18 @@ export function TaskCard({ task }: Props) {
         </span>
       </div>
     )
-  }, [isValidDate, status, endAtDate, now])
+  }, [isValidDate, isValidStartDate, status, endAtDate, startAtDate, now])
 
-  const exactDeadline = useMemo(() => 
-    isValidDate ? format(endAtDate, 'yyyy년 MM월 dd일 HH:mm', { locale: ko }) : '기한 없음'
-  , [isValidDate, endAtDate])
+  const exactDeadline = useMemo(() => {
+    if (status === 'upcoming' && isValidStartDate) {
+      return `${format(startAtDate, 'yyyy년 MM월 dd일 HH:mm')} 열람 시작`
+    }
+    return isValidDate ? format(endAtDate, 'yyyy년 MM월 dd일 HH:mm', { locale: ko }) : '기한 없음'
+  }, [isValidDate, isValidStartDate, status, endAtDate, startAtDate])
 
   const taskLink = useMemo(() => {
+    if (status === 'upcoming' && !task.hasSubmitted) return '#'
+    
     const getModPath = () => {
       switch (task.type) {
         case 'assignment': return 'assign'
@@ -114,18 +146,26 @@ export function TaskCard({ task }: Props) {
       }
     }
     return `${origin}/mod/${getModPath()}/view.php?id=${task.id}`
-  }, [task.type, task.id])
+  }, [task.type, task.id, status, task.hasSubmitted])
 
   return (
-    <a href={taskLink} target="_blank" rel="noopener noreferrer" className="block">
+    <a 
+      href={taskLink} 
+      target={(status === 'upcoming' && !task.hasSubmitted) ? undefined : "_blank"} 
+      rel="noopener noreferrer" 
+      className={cn("block", (status === 'upcoming' && !task.hasSubmitted) && "cursor-default")}
+      onClick={(e) => (status === 'upcoming' && !task.hasSubmitted) && e.preventDefault()}
+    >
       <div
         className={cn(
-          'relative cursor-pointer overflow-hidden rounded-12px border-l-4 bg-white shadow-sm transition-shadow duration-300 hover:bg-gray-50 hover:shadow-md',
+          'relative overflow-hidden rounded-12px border-l-4 bg-white shadow-sm transition-shadow duration-300',
+          (status !== 'upcoming' || task.hasSubmitted) && 'cursor-pointer hover:bg-gray-50 hover:shadow-md',
           {
             'border-l-emerald-500': status === 'submitted',
             'border-l-red-500': status === 'expired',
             'border-l-orange-500': status === 'imminent',
             'border-l-blue-500': status === 'ongoing',
+            'border-l-gray-200 bg-gray-50/50': status === 'upcoming' && !task.hasSubmitted,
             'border-l-gray-300': status === 'no-deadline',
           },
         )}
@@ -133,7 +173,7 @@ export function TaskCard({ task }: Props) {
         <div className="p-12px">
           <div className="flex items-start justify-between">
             <div className="flex flex-1 items-start">
-              <span className="mr-8px mt-2px flex-shrink-0 text-gray-500">
+              <span className={cn("mr-8px mt-2px flex-shrink-0", (status === 'upcoming' && !task.hasSubmitted) ? "text-gray-300" : "text-gray-500")}>
                 {task.type === 'video' || (task.type as string) === 'mooc' ? (
                    <Video size={16} />
                 ) : task.type === 'quiz' ? (
@@ -143,7 +183,9 @@ export function TaskCard({ task }: Props) {
                 )}
               </span>
               <div className="flex flex-1 flex-col">
-                <h3 className="mb-2px flex-1 break-keep text-14px font-semibold text-gray-700">{task.title}</h3>
+                <h3 className={cn("mb-2px flex-1 break-keep text-14px font-semibold", (status === 'upcoming' && !task.hasSubmitted) ? "text-gray-400" : "text-gray-700")}>
+                  {task.title}
+                </h3>
                 <span className="text-11px text-gray-500">
                   {task.courseTitle} · {ACTIVITY_TYPE_MAP[task.type as keyof typeof ACTIVITY_TYPE_MAP] || ((task.type as any) === 'mooc' ? '녹화강의' : task.type)}
                 </span>
@@ -152,17 +194,19 @@ export function TaskCard({ task }: Props) {
 
             <button
               onClick={handleManualToggle}
+              disabled={status === 'upcoming' && !task.hasSubmitted}
               className={cn(
                 'ml-8px flex h-24px w-24px flex-shrink-0 items-center justify-center rounded-6px border-2 transition-all',
                 task.hasSubmitted
                   ? 'border-emerald-500 bg-emerald-500 text-white'
                   : 'border-gray-200 bg-white text-transparent hover:border-emerald-300',
+                status === 'upcoming' && !task.hasSubmitted && 'opacity-30 cursor-not-allowed'
               )}
             >
               <Check size={16} strokeWidth={3} />
             </button>
           </div>
-          {(task.type === 'video' || (task.type as string) === 'mooc') && 'progress' in task && task.progress !== undefined && (
+          {(task.type === 'video' || (task.type as string) === 'mooc') && 'progress' in task && task.progress !== undefined && status !== 'upcoming' && (
             <div className="mt-8px flex flex-col gap-4px pl-24px">
               <div className="flex justify-between text-10px font-medium text-gray-400">
                 <span>진행도</span>
@@ -184,11 +228,11 @@ export function TaskCard({ task }: Props) {
           <div
             className={cn(
               'd-tooltip d-tooltip-right flex cursor-help items-center text-12px font-medium',
-              status === 'expired' ? 'text-gray-500' : 'text-gray-700',
+              status === 'expired' || status === 'upcoming' ? 'text-gray-400' : 'text-gray-700',
             )}
             data-tip={exactDeadline}
           >
-            <Clock size={14} className="mr-1 inline-block" />
+            {status === 'upcoming' ? <Lock size={14} className="mr-1 inline-block" /> : <Clock size={14} className="mr-1 inline-block" />}
             <div className="ml-4px">{deadlineText}</div>
           </div>
           <StatusBadge task={task} status={status} />
