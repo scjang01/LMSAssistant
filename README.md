@@ -48,5 +48,5 @@
 ## ⚖️ 저작권 및 라이선스
 
 - 본 프로젝트는 MIT License를 따릅니다.
-- 기여 및 유지보수: [Sechang Jang](https://github.com/scjang01)
+- 기여 및 유지보수: [scjang01](https://github.com/scjang01)
 - 기반 코드: [Gachon Tools](https://github.com/kangju2000/gachon-extension)
