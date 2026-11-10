@@ -2,6 +2,7 @@ import { Keyboard } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { SettingItem } from './SettingItem'
+import { ASSISTANT_NAME } from '@/constants'
 import { SHORTCUTS, KOREAN_TO_ENGLISH } from '@/constants/shortcuts'
 import { useStorageStore } from '@/storage/useStorageStore'
 import { cn, isMac } from '@/utils'
@@ -22,7 +23,7 @@ const formatShortcutForDisplay = (shortcut: string) => {
 export function Shortcut() {
   const settings = useStorageStore(state => state.settings)
   const updateData = useStorageStore(state => state.updateData)
-  
+
   const { isEditing, setIsEditing } = useStorageStore()
   const [tempShortcut, setTempShortcut] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -102,7 +103,7 @@ export function Shortcut() {
   }, [isEditing, handleShortcutChange])
 
   return (
-    <SettingItem title="단축키 설정" description="가천 어시스턴트를 열고 닫을 단축키를 설정합니다.">
+    <SettingItem title="단축키 설정" description={`${ASSISTANT_NAME}를 열고 닫을 단축키를 설정합니다.`}>
       <div className="space-y-3">
         <div className="relative">
           <input

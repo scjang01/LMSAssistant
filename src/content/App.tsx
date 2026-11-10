@@ -4,8 +4,8 @@ import { ErrorBoundary } from 'react-error-boundary'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 import { ErrorFallback } from '@/components/common/ErrorFallback'
-import { MainModal } from '@/components/layout/MainModal'
 import { ContentThemeProvider } from '@/components/layout/ContentThemeProvider'
+import { MainModal } from '@/components/layout/MainModal'
 import { useShadowRoot } from '@/hooks/useShadowRoot'
 import { useStorageStore } from '@/storage/useStorageStore'
 

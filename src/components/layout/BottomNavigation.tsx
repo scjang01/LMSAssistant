@@ -28,7 +28,7 @@ export function BottomNavigation({ activeTab, setActiveTab }: NavigationProps) {
             clipRule="evenodd"
           />
         </svg>
-        <span className="text-12px">과제</span>
+        <span className="text-12px">할 일</span>
       </button>
       <button
         className={cn('flex flex-1 flex-col items-center justify-center px-16px py-8px', {

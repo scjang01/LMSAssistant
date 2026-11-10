@@ -37,7 +37,7 @@ export function MainModal() {
       animate="visible"
       exit="exit"
       // pointer-events-auto를 추가하여 최상위 호스트의 'none' 설정을 덮어쓰고 클릭을 허용합니다.
-      className="fixed bottom-96px right-25px z-[2147483647] h-600px w-350px origin-right overflow-hidden rounded-36px bg-slate-100 shadow-[0_0_100px_0_rgba(0,0,0,0.2)] backdrop-blur-sm pointer-events-auto"
+      className="pointer-events-auto fixed bottom-96px right-25px z-[2147483647] h-600px w-350px origin-right overflow-hidden rounded-36px bg-slate-100 shadow-[0_0_100px_0_rgba(0,0,0,0.2)] backdrop-blur-sm"
     >
       <Dashboard />
     </motion.div>

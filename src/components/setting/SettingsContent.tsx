@@ -1,6 +1,7 @@
 import { SettingItem } from './SettingItem'
 import { Shortcut } from './Shortcut'
 import packageJson from '../../../package.json'
+import { ASSISTANT_NAME } from '@/constants'
 import { useStorageStore } from '@/storage/useStorageStore'
 
 const { version } = packageJson
@@ -11,6 +12,10 @@ const REFRESH_INTERVAL_OPTIONS = [
   { value: 1000 * 60 * 30, label: '30분' },
   { value: 1000 * 60 * 60, label: '1시간' },
   { value: 1000 * 60 * 120, label: '2시간' },
+  { value: 1000 * 60 * 60 * 4, label: '4시간' },
+  { value: 1000 * 60 * 60 * 8, label: '8시간' },
+  { value: 1000 * 60 * 60 * 12, label: '12시간' },
+  { value: 1000 * 60 * 60 * 24, label: '24시간' },
 ]
 
 export function SettingsContent() {
@@ -41,8 +46,10 @@ export function SettingsContent() {
         </SettingItem>
 
         <div className="mt-24px pt-24px text-center">
-          <div className="text-12px text-gray-400">가천 어시스턴트 v{version}</div>
-          <div className="mt-4px text-10px text-gray-300">© 2026 Sechang Jang. All rights reserved.</div>
+          <div className="text-12px text-gray-400">
+            {ASSISTANT_NAME} v{version}
+          </div>
+          <div className="mt-4px text-10px text-gray-300">© 2026 scjang01</div>
         </div>
       </div>
     </div>

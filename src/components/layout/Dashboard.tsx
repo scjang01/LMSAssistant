@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 
 import { BottomNavigation } from './BottomNavigation'
+import { ToastContainer } from '../common/ToastContainer'
 import { SettingsContent } from '../setting/SettingsContent'
 import { TaskContent } from '../task/TaskContent'
-import { ToastContainer } from '../common/ToastContainer'
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<'tasks' | 'settings'>('tasks')
