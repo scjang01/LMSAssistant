@@ -1,3 +1,4 @@
+import type { Activity } from '@/types'
 import { isImminentTask } from '@/utils'
 
 /**
@@ -6,12 +7,12 @@ import { isImminentTask } from '@/utils'
 const updateBadge = async () => {
   try {
     const data = await chrome.storage.local.get(['contents', 'manualOverrides'])
-    const activityList = data.contents?.activityList || []
+    const activityList: Activity[] = data.contents?.activityList || []
     const manualOverrides = data.manualOverrides || {}
 
-    const imminentCount = activityList.filter((task: any) => {
+    const imminentCount = activityList.filter(task => {
       // 사용자가 수동으로 체크했거나 실제 제출 상태를 반영하여 마감 임박 여부 계산
-      const hasSubmitted = manualOverrides[task.id] !== undefined ? manualOverrides[task.id] : task.hasSubmitted
+      const hasSubmitted = manualOverrides[task.id] === true ? true : task.hasSubmitted
       return isImminentTask({ ...task, hasSubmitted })
     }).length
 
@@ -40,17 +41,20 @@ chrome.runtime.onInstalled.addListener(async () => {
   for (const cs of manifest.content_scripts ?? []) {
     for (const tab of await chrome.tabs.query({ url: cs.matches ?? [] })) {
       if (tab.id) {
-        chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: cs.js ?? [],
-        }).catch(() => {}) // 에러 무시
+        chrome.scripting
+          .executeScript({
+            target: { tabId: tab.id },
+            files: cs.js ?? [],
+          })
+          .catch(() => {}) // 에러 무시
       }
     }
   }
 })
 
 // 3. 브라우저 시작 시 실행
-chrome.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(async () => {
+  await chrome.alarms.create('update-badge-alarm', { periodInMinutes: 1 })
   updateBadge()
 })
 
@@ -114,8 +118,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       return false
     }
 
-    fetch(request.url, { credentials: 'include' })
+    fetch(request.url, { credentials: 'include', signal: AbortSignal.timeout(30000) })
       .then(async response => {
+        if (!response.ok) throw new Error(`LMS_HTTP_${response.status}`)
         const html = await response.text()
         sendResponse({
           success: true,

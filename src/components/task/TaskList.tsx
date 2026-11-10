@@ -12,13 +12,14 @@ type Props = {
 
 export function TaskList({ tasks }: Props) {
   const listRef = useRef<HTMLDivElement>(null)
+  const scrolledDate = useRef('')
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
   const groupedTasks = useMemo(() => {
     const groups: Record<string, Activity[]> = {}
 
     tasks.forEach(task => {
-      const date = task.endAt ? task.endAt.split(' ')[0] : 'no-deadline'
+      const date = task.endAt ? task.endAt.split(/[T ]/)[0] : 'no-deadline'
       if (!groups[date]) groups[date] = []
       groups[date].push(task)
     })
@@ -36,7 +37,7 @@ export function TaskList({ tasks }: Props) {
 
   // 지능형 자동 스크롤 로직 (오늘 -> 가장 가까운 미래)
   useEffect(() => {
-    if (!listRef.current || tasks.length === 0) return
+    if (!listRef.current || tasks.length === 0 || scrolledDate.current === todayStr) return
 
     const scrollTimer = setTimeout(() => {
       const container = listRef.current?.closest('.overflow-y-scroll')
@@ -61,14 +62,15 @@ export function TaskList({ tasks }: Props) {
       if (targetElement) {
         const containerRect = container.getBoundingClientRect()
         const targetRect = targetElement.getBoundingClientRect()
-        
+
         // 컨테이너 상단으로부터의 상대 위치 계산 (padding 고려)
-        const relativeTop = targetRect.top - containerRect.top + container.scrollTop - 20 
+        const relativeTop = targetRect.top - containerRect.top + container.scrollTop - 20
 
         container.scrollTo({
           top: Math.max(0, relativeTop),
-          behavior: 'smooth'
+          behavior: 'smooth',
         })
+        scrolledDate.current = todayStr
       }
     }, 150)
 
@@ -78,7 +80,7 @@ export function TaskList({ tasks }: Props) {
   if (tasks.length === 0) {
     return (
       <div className="flex h-40 flex-col items-center justify-center text-gray-400">
-        <p className="text-14px font-medium">표시할 과제가 없습니다</p>
+        <p className="text-14px font-medium">표시할 할 일이 없습니다</p>
       </div>
     )
   }
@@ -98,9 +100,7 @@ export function TaskList({ tasks }: Props) {
     <div ref={listRef} className="space-y-24px pb-40px">
       {Object.entries(groupedTasks).map(([date, items]) => (
         <div key={date} data-date={date} className="space-y-12px">
-          <h3 className="px-4px text-12px font-bold text-gray-400">
-            {getDisplayDate(date)}
-          </h3>
+          <h3 className="px-4px text-12px font-bold text-gray-400">{getDisplayDate(date)}</h3>
           <div className="grid gap-12px">
             {items.map(task => (
               <motion.div

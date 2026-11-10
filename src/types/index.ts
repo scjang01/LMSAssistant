@@ -5,7 +5,9 @@ export interface BaseActivity {
   title: string
   startAt: string
   endAt: string
-  hasSubmitted: boolean
+  hasSubmitted: boolean | null
+  url?: string
+  syncFailed?: boolean
 }
 
 export interface Course {
@@ -15,12 +17,14 @@ export interface Course {
 
 export interface Assignment extends BaseActivity {
   type: 'assignment'
+  onlineSubmissionNotRequired?: boolean
 }
 
 export interface Video extends BaseActivity {
   type: 'video'
   sectionTitle: string
   progress?: number
+  attendanceNotRequired?: boolean
 }
 
 export interface Quiz extends BaseActivity {
@@ -34,7 +38,7 @@ export type Contents = {
   activityList: Activity[]
 }
 
-export type ActivityStatus = 'all' | 'ongoing' | 'imminent' | 'expired' | 'submitted' | 'upcoming'
+export type ActivityStatus = 'all' | 'ongoing' | 'imminent' | 'expired' | 'submitted' | 'upcoming' | 'unknown'
 
 export type ActivityType = 'assignment' | 'video' | 'quiz'
 

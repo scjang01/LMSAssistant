@@ -1,21 +1,19 @@
-import { isValid } from 'date-fns'
-
 import type { Activity, ActivityStatus, FilterOptions as _FilterOptions } from '@/types'
-import { getTaskStatus } from '@/utils'
+import { getTaskStatus, safeParseDate } from '@/utils'
 
 const isValidActivity = (activity: Activity): boolean =>
-  activity.title !== '' && (!activity.endAt || activity.endAt === '' || isValid(new Date(activity.endAt)))
+  activity.title !== '' && (!activity.endAt || activity.endAt === '' || safeParseDate(activity.endAt) !== null)
 
-const filterByStatus = (activity: Activity, statuses: ActivityStatus[]): boolean => {
-  if (statuses.length === 0) return true
+const filterByStatus = (activity: Activity, statuses: ActivityStatus[], now?: Date): boolean => {
+  if (statuses.length === 0 || statuses.includes('all')) return true
 
-  const taskStatus = getTaskStatus(activity)
+  const taskStatus = getTaskStatus(activity, now)
 
   return statuses.some(status => {
     if (status === 'ongoing') {
       return taskStatus === 'ongoing' || taskStatus === 'no-deadline'
     }
-    return taskStatus === (status as any)
+    return taskStatus === status
   })
 }
 
@@ -40,10 +38,13 @@ const filterBySearchQuery = (activity: Activity, searchQuery?: string): boolean 
   return activity.title.toLowerCase().includes(query) || activity.courseTitle.toLowerCase().includes(query)
 }
 
-export function filterActivities(activity: Activity, options: _FilterOptions & { searchQuery?: string }): boolean {
+export function filterActivities(
+  activity: Activity,
+  options: _FilterOptions & { searchQuery?: string; now?: Date },
+): boolean {
   return (
     isValidActivity(activity) &&
-    filterByStatus(activity, options.statuses) &&
+    filterByStatus(activity, options.statuses, options.now) &&
     filterByCourse(activity, options.courseIds) &&
     filterByCategory(activity, options.categories) &&
     filterBySearchQuery(activity, options.searchQuery)

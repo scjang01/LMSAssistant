@@ -1,16 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import toast from 'react-hot-toast'
 
 import { useRefreshCheck } from './useRefreshCheck'
-import {
-  getActivities,
-  getAssignmentSubmitted,
-  getCourses,
-  getQuizSubmitted,
-  getVideoSubmitted,
-} from '@/services/parser'
-import { fetchAndParse } from '@/services/parser/utils/dom'
-import { URL_PATTERNS } from '@/services/parser/constants'
+import { getCourseActivities, getCourses, restoreSession } from '@/services/parser'
 import { useStorageStore } from '@/storage/useStorageStore'
 import type { Activity } from '@/types'
 
@@ -18,16 +10,16 @@ import type { Activity } from '@/types'
  * 사이버캠퍼스 데이터를 크롤링하여 저장소에 동기화하는 커스텀 훅
  */
 export const useContentsFetcher = () => {
-  const [isLoading, setIsLoading] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [syncStatus, setSyncStatus] = useState('')
-  const { updateData, isInitialized } = useStorageStore()
-  const { shouldRefresh } = useRefreshCheck()
+  const { syncState, setSyncState, updateData, isInitialized } = useStorageStore()
+  const { isLoading, progress, status: syncStatus } = syncState
+  const setProgress = (value: number) => setSyncState({ progress: value })
+  const setSyncStatus = (value: string) => setSyncState({ status: value })
+  const { shouldRefresh, checkedAt } = useRefreshCheck()
 
   const fetchContents = async () => {
-    if (isLoading || !isInitialized) return
+    if (useStorageStore.getState().syncState.isLoading || !useStorageStore.getState().isInitialized) return
 
-    setIsLoading(true)
+    setSyncState({ isLoading: true })
     setProgress(5)
     setSyncStatus('과목 목록을 가져오는 중...')
 
@@ -47,24 +39,27 @@ export const useContentsFetcher = () => {
       const maxCourses = courseList.length
       let completedCount = 0
       let errorCount = 0
+      let loginRequired = false
+      let saveQueue = Promise.resolve()
+      const previousActivities = useStorageStore.getState().contents.activityList
+      const persistCourse = (courseId: string, activities: Activity[]) => {
+        saveQueue = saveQueue.then(async () => {
+          if (loginRequired) return
+          await updateData('contents', prev => ({
+            courseList: [{ id: '-1', title: '전체 과목' }, ...courseList],
+            activityList: [...prev.activityList.filter(a => a.courseId !== courseId), ...activities],
+          }))
+        })
+        return saveQueue
+      }
 
-      const results = await Promise.all(
+      const results = await Promise.allSettled(
         courseList.map(async course => {
           try {
-            const [assignmentSubmittedArray, videoSubmittedArray, quizSubmittedArray] =
-              await Promise.all([
-                getAssignmentSubmitted(course.id),
-                getVideoSubmitted(course.id),
-                getQuizSubmitted(course.id),
-              ])
-
-            const activities = await getActivities(
-              course.title,
-              course.id,
-              assignmentSubmittedArray,
-              videoSubmittedArray,
-              quizSubmittedArray,
-            )
+            const activities = await getCourseActivities(course, previousActivities)
+            if (loginRequired) return []
+            errorCount += activities.filter(a => a.syncFailed).length
+            await persistCourse(course.id, activities)
 
             completedCount++
             setSyncStatus(`[${completedCount}/${maxCourses}] ${course.title} 분석 완료`)
@@ -74,30 +69,36 @@ export const useContentsFetcher = () => {
           } catch (courseError) {
             console.error(`Failed to fetch course ${course.title}:`, courseError)
             if (courseError instanceof Error && courseError.message === 'LOGIN_REQUIRED') {
+              loginRequired = true
               throw courseError
             }
             completedCount++
             errorCount++
-            return []
+            const previous = previousActivities
+              .filter(a => a.courseId === course.id)
+              .map(a => ({ ...a, syncFailed: true }))
+            await persistCourse(course.id, previous)
+            return previous
           }
         }),
       )
 
-      const activityList = results.flat()
+      const failure = results.find(result => result.status === 'rejected')
+      if (failure?.status === 'rejected') throw failure.reason
+      const activityList = results.flatMap(result => (result.status === 'fulfilled' ? result.value : []))
       setSyncStatus('데이터 저장 중...')
 
-      // 3. 트랜잭션: 모든 크롤링이 성공했을 때만 로컬 저장소 업데이트
+      // 수강하지 않는 과목과 삭제된 활동을 최종 정리합니다.
       await updateData('contents', () => ({
         courseList: [{ id: '-1', title: '전체 과목' }, ...courseList],
         activityList,
       }))
+      // 언어 설정 복구 및 세션 유지
+      await restoreSession()
       await updateData('meta', prev => ({ ...prev, updateAt: new Date().toISOString() }))
 
-      // 언어 설정 복구 및 세션 유지
-      await fetchAndParse(URL_PATTERNS.courses, 'ko')
-
       if (errorCount > 0) {
-        toast.error(`${errorCount}개의 과목 데이터를 가져오지 못했습니다.\n학교 사이트 구조가 변경되었을 수 있습니다.`, {
+        toast.error(`${errorCount}개 항목의 최신 상태를 확인하지 못했습니다. 이전 결과가 있으면 유지합니다.`, {
           duration: 5000,
         })
       } else {
@@ -115,9 +116,7 @@ export const useContentsFetcher = () => {
       }
       console.error('Sync failed:', error)
     } finally {
-      setIsLoading(false)
-      setProgress(0)
-      setSyncStatus('')
+      setSyncState({ isLoading: false, progress: 0, status: '' })
     }
   }
 
@@ -126,7 +125,7 @@ export const useContentsFetcher = () => {
     if (isInitialized && shouldRefresh) {
       fetchContents()
     }
-  }, [isInitialized, shouldRefresh])
+  }, [isInitialized, shouldRefresh, checkedAt])
 
   return { refetch: fetchContents, isLoading, progress, syncStatus }
 }

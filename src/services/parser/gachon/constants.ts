@@ -111,15 +111,8 @@ export const DOM_SELECTORS: DOMSelectors = {
   },
 }
 
-// Universities
-export const UNIVERSITY_REGEX = {
-  가천대학교: {
-    titleRegex: /\s*\[\d+\]|\s*\([\w\d]+_[\w\d]+\)/g,
-  },
-  인천대학교: {
-    titleRegex: /\s*\([\w\d]+\)/g,
-  },
-} as const
+// Course titles
+export const COURSE_TITLE_REGEX = /\s*\[\d+\]|\s*\([\w\d]+_[\w\d]+\)/g
 
 // Strict matching strings based on actual site findings (supports both Korean and English)
 export const SUBMISSION_STRINGS = {
@@ -149,10 +142,7 @@ export const URL_PATTERNS = {
     `/local/ubion/user/index.php?year=${year}&semester=${semester}`,
   activities: (courseId: string) => `/course/view.php?id=${courseId}`,
   assignmentSubmitted: (courseId: string) => `/mod/assign/index.php?id=${courseId}`,
-  videoSubmitted: (courseId: string) =>
-    import.meta.env.VITE_UNIV_ID === 'incheon'
-      ? `/report/ubcompletion/user_progress_a.php?id=${courseId}`
-      : `/report/ubcompletion/user_progress.php?id=${courseId}`,
+  videoSubmitted: (courseId: string) => `/report/ubcompletion/user_progress.php?id=${courseId}`,
   quizSubmitted: (courseId: string) => `/mod/quiz/index.php?id=${courseId}`,
   videoIndex: (courseId: string) => `/mod/vod/index.php?id=${courseId}`,
 } as const

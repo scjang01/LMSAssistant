@@ -1,8 +1,6 @@
-import { differenceInHours, isPast, isFuture } from 'date-fns'
+import type { Activity } from '@/types'
 
-import { Activity } from '@/types'
-
-export type TaskStatus = 'submitted' | 'expired' | 'imminent' | 'ongoing' | 'upcoming' | 'no-deadline'
+export type TaskStatus = 'submitted' | 'expired' | 'imminent' | 'ongoing' | 'upcoming' | 'no-deadline' | 'unknown'
 
 /**
  * Safari 등 다양한 브라우저에서 날짜 문자열을 안전하게 파싱합니다.
@@ -27,18 +25,19 @@ export const getTaskStatus = (task: Activity, now: Date = new Date()): TaskStatu
 
   // 시작 시간 확인 (진행 전 상태 판단)
   const startAtDate = safeParseDate(task.startAt)
-  if (startAtDate && isFuture(startAtDate)) {
+  if (startAtDate && startAtDate > now) {
     return 'upcoming'
   }
+
+  if (task.hasSubmitted === null) return 'unknown'
 
   const endAtDate = safeParseDate(task.endAt)
   if (!endAtDate) return 'no-deadline'
 
-  const isExpired = isPast(endAtDate)
+  const isExpired = endAtDate <= now
   if (isExpired) return 'expired'
 
-  const hoursUntilDue = differenceInHours(endAtDate, now)
-  if (hoursUntilDue >= 0 && hoursUntilDue <= 48) return 'imminent'
+  if (endAtDate.getTime() - now.getTime() <= 48 * 60 * 60 * 1000) return 'imminent'
 
   return 'ongoing'
 }

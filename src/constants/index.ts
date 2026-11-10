@@ -1,6 +1,7 @@
 export const UNIV_URL = import.meta.env.VITE_UNIV_URL
 export const UNIV_NAME = import.meta.env.VITE_UNIV_NAME
 export const UNIV_ID = import.meta.env.VITE_UNIV_ID
+export const ASSISTANT_NAME = UNIV_ID === 'incheon' ? 'LMS 어시스턴트' : '가천 어시스턴트'
 
 export const UNIVERSITY_NAME_MAP = {
   [UNIV_URL]: UNIV_NAME,
@@ -11,7 +12,7 @@ export type University = (typeof UNIVERSITY_NAME_MAP)[UniversityLink]
 
 export const UNIVERSITY_LINK_LIST = Object.keys(UNIVERSITY_NAME_MAP) as UniversityLink[]
 
-export const SHADOW_HOST_ID = 'gachon-assistant-shadow-host'
+export const SHADOW_HOST_ID = `lms-assistant-${UNIV_ID}-shadow-host`
 
 export const TAB_LIST = ['진행중인 과제', '모든 과제']
 

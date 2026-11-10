@@ -1,23 +1,34 @@
 import { format, differenceInMinutes, differenceInDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Video, FileText, CheckCircle, AlertTriangle, Clock, XCircle, HelpCircle, Check, Lock } from 'lucide-react'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 
 import { ACTIVITY_TYPE_MAP } from '@/constants'
+import { useNow } from '@/hooks/useNow'
+import { getActivityUrl } from '@/services/parser'
 import { useStorageStore } from '@/storage/useStorageStore'
 import type { Activity } from '@/types'
-import { cn, origin, getTaskStatus } from '@/utils'
+import { cn, getTaskStatus } from '@/utils'
+import type { TaskStatus } from '@/utils/task'
 
-const StatusBadge = ({
-  task,
-  status,
-}: {
-  task: Activity
-  status: 'submitted' | 'expired' | 'imminent' | 'ongoing' | 'upcoming' | 'no-deadline'
-}) => {
+const StatusBadge = ({ task, status }: { task: Activity; status: TaskStatus }) => {
   const isVideo = task.type === 'video' || (task.type as string) === 'mooc'
 
+  if (task.type === 'assignment' && task.onlineSubmissionNotRequired && !task.hasSubmitted) {
+    return <span className="text-12px font-medium text-gray-500">온라인 제출 없음</span>
+  }
+
+  if (task.type === 'video' && task.attendanceNotRequired && !task.hasSubmitted) {
+    return <span className="text-12px font-medium text-gray-500">출석 체크 없음</span>
+  }
+
   switch (status) {
+    case 'unknown':
+      return (
+        <span className="flex items-center text-12px font-medium text-gray-500">
+          <HelpCircle size={14} className="mr-1" /> 확인 불가
+        </span>
+      )
     case 'submitted':
       return (
         <span className="flex items-center text-12px font-medium text-emerald-600">
@@ -59,19 +70,13 @@ type Props = {
 
 export function TaskCard({ task }: Props) {
   const updateData = useStorageStore(state => state.updateData)
-  
+
   const endAtDate = useMemo(() => (task.endAt ? new Date(task.endAt) : new Date(NaN)), [task.endAt])
   const startAtDate = useMemo(() => (task.startAt ? new Date(task.startAt) : new Date(NaN)), [task.startAt])
   const isValidDate = !isNaN(endAtDate.getTime())
   const isValidStartDate = !isNaN(startAtDate.getTime())
 
-  // 서버 갱신 없이 시간만 실시간으로 업데이트하기 위한 상태
-  const [now, setNow] = useState(new Date())
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000 * 60) // 1분마다 갱신
-    return () => clearInterval(timer)
-  }, [])
+  const now = useNow()
 
   const status = useMemo(() => {
     const currentStatus = getTaskStatus(task, now)
@@ -84,7 +89,7 @@ export function TaskCard({ task }: Props) {
     e.stopPropagation()
     updateData('manualOverrides', prev => ({
       ...prev,
-      [task.id]: !task.hasSubmitted,
+      [task.id]: prev[task.id] === undefined ? !task.hasSubmitted : !prev[task.id],
     }))
   }
 
@@ -96,7 +101,9 @@ export function TaskCard({ task }: Props) {
 
     if (status === 'upcoming' && isValidStartDate) {
       const daysUntil = differenceInDays(startAtDate, now)
-      const periodRange = `${format(startAtDate, 'MM.dd')}~${format(endAtDate, 'MM.dd')}`
+      const periodRange = isValidDate
+        ? `${format(startAtDate, 'MM.dd')}~${format(endAtDate, 'MM.dd')}`
+        : `${format(startAtDate, 'MM.dd')}~`
       return (
         <div className="flex items-baseline gap-4px text-gray-400">
           <span className="font-bold">{daysUntil > 0 ? `${daysUntil}일 뒤 열람 가능` : '곧 열람 가능'}</span>
@@ -135,26 +142,17 @@ export function TaskCard({ task }: Props) {
 
   const taskLink = useMemo(() => {
     if (status === 'upcoming' && !task.hasSubmitted) return '#'
-    
-    const getModPath = () => {
-      switch (task.type) {
-        case 'assignment': return 'assign'
-        case 'video':
-        case 'mooc' as any: return 'vod'
-        case 'quiz': return 'quiz'
-        default: return 'assign'
-      }
-    }
-    return `${origin}/mod/${getModPath()}/view.php?id=${task.id}`
-  }, [task.type, task.id, status, task.hasSubmitted])
+
+    return getActivityUrl(task)
+  }, [task, status])
 
   return (
-    <a 
-      href={taskLink} 
-      target={(status === 'upcoming' && !task.hasSubmitted) ? undefined : "_blank"} 
-      rel="noopener noreferrer" 
-      className={cn("block", (status === 'upcoming' && !task.hasSubmitted) && "cursor-default")}
-      onClick={(e) => (status === 'upcoming' && !task.hasSubmitted) && e.preventDefault()}
+    <a
+      href={taskLink}
+      target={status === 'upcoming' && !task.hasSubmitted ? undefined : '_blank'}
+      rel="noopener noreferrer"
+      className={cn('block', status === 'upcoming' && !task.hasSubmitted && 'cursor-default')}
+      onClick={e => status === 'upcoming' && !task.hasSubmitted && e.preventDefault()}
     >
       <div
         className={cn(
@@ -166,16 +164,21 @@ export function TaskCard({ task }: Props) {
             'border-l-orange-500': status === 'imminent',
             'border-l-blue-500': status === 'ongoing',
             'border-l-gray-200 bg-gray-50/50': status === 'upcoming' && !task.hasSubmitted,
-            'border-l-gray-300': status === 'no-deadline',
+            'border-l-gray-300': status === 'no-deadline' || status === 'unknown',
           },
         )}
       >
         <div className="p-12px">
           <div className="flex items-start justify-between">
             <div className="flex flex-1 items-start">
-              <span className={cn("mr-8px mt-2px flex-shrink-0", (status === 'upcoming' && !task.hasSubmitted) ? "text-gray-300" : "text-gray-500")}>
+              <span
+                className={cn(
+                  'mr-8px mt-2px flex-shrink-0',
+                  status === 'upcoming' && !task.hasSubmitted ? 'text-gray-300' : 'text-gray-500',
+                )}
+              >
                 {task.type === 'video' || (task.type as string) === 'mooc' ? (
-                   <Video size={16} />
+                  <Video size={16} />
                 ) : task.type === 'quiz' ? (
                   <HelpCircle size={16} />
                 ) : (
@@ -183,16 +186,25 @@ export function TaskCard({ task }: Props) {
                 )}
               </span>
               <div className="flex flex-1 flex-col">
-                <h3 className={cn("mb-2px flex-1 break-keep text-14px font-semibold", (status === 'upcoming' && !task.hasSubmitted) ? "text-gray-400" : "text-gray-700")}>
+                <h3
+                  className={cn(
+                    'mb-2px flex-1 break-keep text-14px font-semibold',
+                    status === 'upcoming' && !task.hasSubmitted ? 'text-gray-400' : 'text-gray-700',
+                  )}
+                >
                   {task.title}
                 </h3>
                 <span className="text-11px text-gray-500">
-                  {task.courseTitle} · {ACTIVITY_TYPE_MAP[task.type as keyof typeof ACTIVITY_TYPE_MAP] || ((task.type as any) === 'mooc' ? '녹화강의' : task.type)}
+                  {task.courseTitle} ·{' '}
+                  {ACTIVITY_TYPE_MAP[task.type as keyof typeof ACTIVITY_TYPE_MAP] ||
+                    ((task.type as string) === 'mooc' ? '녹화강의' : task.type)}
                 </span>
+                {task.syncFailed && <span className="text-10px text-amber-600">최신 상태 확인 실패</span>}
               </div>
             </div>
 
             <button
+              aria-label={task.hasSubmitted ? '완료 표시 해제' : '완료로 표시'}
               onClick={handleManualToggle}
               disabled={status === 'upcoming' && !task.hasSubmitted}
               className={cn(
@@ -200,29 +212,32 @@ export function TaskCard({ task }: Props) {
                 task.hasSubmitted
                   ? 'border-emerald-500 bg-emerald-500 text-white'
                   : 'border-gray-200 bg-white text-transparent hover:border-emerald-300',
-                status === 'upcoming' && !task.hasSubmitted && 'opacity-30 cursor-not-allowed'
+                status === 'upcoming' && !task.hasSubmitted && 'cursor-not-allowed opacity-30',
               )}
             >
               <Check size={16} strokeWidth={3} />
             </button>
           </div>
-          {(task.type === 'video' || (task.type as string) === 'mooc') && 'progress' in task && task.progress !== undefined && status !== 'upcoming' && (
-            <div className="mt-8px flex flex-col gap-4px pl-24px">
-              <div className="flex justify-between text-10px font-medium text-gray-400">
-                <span>진행도</span>
-                <span>{task.progress}%</span>
+          {(task.type === 'video' || (task.type as string) === 'mooc') &&
+            'progress' in task &&
+            task.progress !== undefined &&
+            status !== 'upcoming' && (
+              <div className="mt-8px flex flex-col gap-4px pl-24px">
+                <div className="flex justify-between text-10px font-medium text-gray-400">
+                  <span>진행도</span>
+                  <span>{task.progress}%</span>
+                </div>
+                <div className="h-4px w-full overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className={cn(
+                      'h-full transition-all duration-500 ease-out',
+                      task.progress >= 100 ? 'bg-emerald-500' : 'bg-blue-500',
+                    )}
+                    style={{ width: `${task.progress}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-4px w-full overflow-hidden rounded-full bg-gray-100">
-                <div
-                  className={cn(
-                    'h-full transition-all duration-500 ease-out',
-                    task.progress >= 100 ? 'bg-emerald-500' : 'bg-blue-500',
-                  )}
-                  style={{ width: `${task.progress}%` }}
-                />
-              </div>
-            </div>
-          )}
+            )}
         </div>
         <div className="flex items-center justify-between gap-4px bg-gray-50 px-12px py-8px">
           <div
@@ -232,7 +247,11 @@ export function TaskCard({ task }: Props) {
             )}
             data-tip={exactDeadline}
           >
-            {status === 'upcoming' ? <Lock size={14} className="mr-1 inline-block" /> : <Clock size={14} className="mr-1 inline-block" />}
+            {status === 'upcoming' ? (
+              <Lock size={14} className="mr-1 inline-block" />
+            ) : (
+              <Clock size={14} className="mr-1 inline-block" />
+            )}
             <div className="ml-4px">{deadlineText}</div>
           </div>
           <StatusBadge task={task} status={status} />

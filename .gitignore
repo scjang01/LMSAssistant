@@ -49,3 +49,6 @@ conductor/
 .antigravitycli
 memory/
 tracker/
+
+# Local LMS samples
+samples/incheon/*.html

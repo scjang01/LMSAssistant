@@ -41,6 +41,11 @@ const STATUS_STYLES: Record<string, StatusStyle> = {
     inactive: 'bg-red-50 text-red-700 hover:bg-red-100',
     label: '마감 지남',
   },
+  unknown: {
+    active: 'bg-slate-600 text-white shadow-md',
+    inactive: 'bg-slate-50 text-slate-700 hover:bg-slate-100',
+    label: '확인 불가',
+  },
 }
 
 const STATUS_MAP = Object.entries(STATUS_STYLES).reduce(
@@ -54,8 +59,10 @@ export function TaskContent() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const meta = useStorageStore(state => state.meta)
+  const hasSavedActivities = useStorageStore(state => state.contents.activityList.length > 0)
 
   const { progress, isLoading, refetch, syncStatus } = useContentsFetcher()
+  const showSkeleton = isLoading && !hasSavedActivities
   const { filteredTasks, summary, toggleFilter, removeFilter, filterOptions, courseList } = useTaskFilter(searchQuery)
 
   const formattedUpdateTime = formatDistanceToNowStrict(new Date(meta.updateAt), { addSuffix: true, locale: ko })
@@ -68,7 +75,7 @@ export function TaskContent() {
     <>
       <div className="bg-white bg-opacity-50 px-16px py-12px">
         <div className="mb-12px flex items-center justify-between">
-          <h2 className="text-16px font-bold">과제 목록</h2>
+          <h2 className="text-16px font-bold">할 일 목록</h2>
           <div className="group relative">
             <button className="d-btn d-btn-ghost d-btn-sm p-1" onClick={refetch} disabled={isLoading}>
               <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
@@ -82,7 +89,7 @@ export function TaskContent() {
         <div className="relative mb-8px">
           <input
             type="text"
-            placeholder="과제 검색"
+            placeholder="할 일 검색"
             className="d-input d-input-sm d-input-bordered w-full pl-36px"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -92,9 +99,13 @@ export function TaskContent() {
           <Search size={18} className="absolute left-12px top-1/2 -translate-y-1/2 text-gray-400" />
         </div>
 
-        <div className="mb-12px flex gap-4px overflow-x-auto no-scrollbar pb-4px">
+        <div className="no-scrollbar mb-12px flex gap-4px overflow-x-auto pb-4px">
           {Object.entries(STATUS_STYLES)
-            .filter(([key]) => key !== 'upcoming')
+            .filter(
+              ([key]) =>
+                key !== 'upcoming' &&
+                (key !== 'unknown' || summary.unknown > 0 || filterOptions.statuses.includes('unknown')),
+            )
             .map(([key, style]) => (
               <button
                 key={key}
@@ -104,7 +115,7 @@ export function TaskContent() {
                 )}
                 onClick={() => toggleFilter('statuses', key as ActivityStatus)}
               >
-                <span className="text-16px font-bold">{(summary as any)[key] || 0}</span>
+                <span className="text-16px font-bold">{summary[key as keyof typeof summary] || 0}</span>
                 <span className="text-9px font-medium opacity-80">{style.label}</span>
               </button>
             ))}
@@ -187,12 +198,8 @@ export function TaskContent() {
             className="z-50 w-full overflow-hidden bg-blue-50"
           >
             <div className="flex items-center justify-between px-16px py-6px">
-              <span className="animate-pulse text-10px font-bold text-blue-600">
-                {syncStatus || '준비 중...'}
-              </span>
-              <span className="text-10px font-black text-blue-400">
-                {Math.round(progress)}%
-              </span>
+              <span className="animate-pulse text-10px font-bold text-blue-600">{syncStatus || '준비 중...'}</span>
+              <span className="text-10px font-black text-blue-400">{Math.round(progress)}%</span>
             </div>
             <div className="h-4px w-full bg-blue-100">
               <motion.div
@@ -212,11 +219,11 @@ export function TaskContent() {
         <div
           ref={scrollRef}
           className={cn('no-scrollbar h-full overscroll-contain px-16px py-20px', {
-            'overflow-y-scroll': !isLoading,
-            'overflow-hidden': isLoading,
+            'overflow-y-scroll': !showSkeleton,
+            'overflow-hidden': showSkeleton,
           })}
         >
-          {isLoading ? <LoadingSkeleton /> : <TaskList tasks={filteredTasks} />}
+          {showSkeleton ? <LoadingSkeleton /> : <TaskList tasks={filteredTasks} />}
         </div>
       </div>
     </>
