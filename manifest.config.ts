@@ -5,13 +5,12 @@ import packageJson from './package.json'
 
 const [major, minor, patch, label = '0'] = packageJson.version.replace(/[^\d.-]+/g, '').split(/[.-]/)
 
-export default defineManifest(async (env) => {
+export default defineManifest(async env => {
   const config = loadEnv(env.mode, process.cwd())
-  const isDev = env.mode === 'development'
+  const isDev = env.command === 'serve'
 
-  const extensionName = config.VITE_EXTENSION_NAME || '가천 어시스턴트'
+  const extensionName = config.VITE_EXTENSION_NAME || 'LMS 어시스턴트'
   const extensionDesc = config.VITE_EXTENSION_DESC || packageJson.description
-  const univUrl = config.VITE_UNIV_URL || 'https://cyber.gachon.ac.kr'
   const univId = config.VITE_UNIV_ID || 'gachon'
 
   return {
@@ -65,13 +64,11 @@ export default defineManifest(async (env) => {
       },
     ],
     content_security_policy: {
-      extension_pages: isDev 
+      extension_pages: isDev
         ? "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self';"
         : "script-src 'self'; object-src 'self';",
     },
-    host_permissions: isDev 
-      ? ['<all_urls>', 'http://localhost:*', 'http://127.0.0.1:*']
-      : ['<all_urls>'],
+    host_permissions: isDev ? ['<all_urls>', 'http://localhost:*', 'http://127.0.0.1:*'] : ['<all_urls>'],
     permissions: ['storage', 'unlimitedStorage', 'scripting', 'activeTab', 'alarms'],
   }
 })

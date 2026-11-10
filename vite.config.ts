@@ -6,7 +6,7 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 
 import manifest from './manifest.config'
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     tsconfigPaths(),
@@ -24,22 +24,25 @@ export default defineConfig(({ mode }) => ({
       '@/assets': resolve(__dirname, './src/assets'),
     },
   },
-  // 배포 시 모든 콘솔 로그 및 디버거 제거
+  // 배포 시 디버거를 제거하고 오류 로그는 유지합니다.
   esbuild: {
-    drop: mode === 'production' ? ['console', 'debugger'] : [],
+    drop: command === 'build' ? ['debugger'] : [],
   },
   build: {
     // 빌드 결과물 최적화
     cssCodeSplit: true,
-    sourcemap: mode === 'development',
+    sourcemap: false,
     assetsInlineLimit: 4096,
   },
   // 배포 시 불필요한 서버 설정 제거
-  server: mode === 'development' ? {
-    port: 5173,
-    strictPort: true,
-    hmr: {
-      port: 5173,
-    },
-  } : undefined,
+  server:
+    command === 'serve'
+      ? {
+          port: 5173,
+          strictPort: true,
+          hmr: {
+            port: 5173,
+          },
+        }
+      : undefined,
 }))
